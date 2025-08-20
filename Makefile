@@ -84,8 +84,8 @@ clean:
 
 health:
 	@echo "🏥 Checking system health..."
-	python -c "import requests; print('✅ Backend:', 'OK' if requests.get('http://localhost:8000/health', timeout=5).status_code == 200 else 'FAIL')" 2>/dev/null || echo "❌ Backend: Not running"
-	python -c "import requests; print('✅ Frontend:', 'OK' if requests.get('http://localhost:8501', timeout=5).status_code == 200 else 'FAIL')" 2>/dev/null || echo "❌ Frontend: Not running"
+	python -c "import requests; print('✅ Backend:', 'OK' if requests.get('http://localhost:8000/health', timeout=5).status_code == 200 else 'FAIL')\" 2>/dev/null || echo "❌ Backend: Not running"
+	python -c "import requests; print('✅ Frontend:', 'OK' if requests.get('http://localhost:8501', timeout=5).status_code == 200 else 'FAIL')\" 2>/dev/null || echo "❌ Frontend: Not running"
 
 # Development helpers
 dev-install:

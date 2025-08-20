@@ -27,12 +27,13 @@ try:
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
     REPORTLAB_AVAILABLE = True
 except ImportError:
+    logger = logging.getLogger(__name__)
     REPORTLAB_AVAILABLE = False
     logger.warning("reportlab not available. PDF generation will be disabled.")
 
-from ..models.complaintModel import ComplaintData, ComplaintStatus, PriorityLevel
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from backend.models.complaintModel import ComplaintData, ComplaintStatus, PriorityLevel
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 logger = logging.getLogger(__name__)
 
@@ -295,8 +296,8 @@ class PDFService:
             story.append(Spacer(1, 12))
             
             basic_info = [
-                ["Complaint ID:", complaint_data.complaint_id or "N/A"],
-                ["Date Filed:", complaint_data.date_filed or "N/A"],
+                ["Complaint ID:", getattr(complaint_data, 'complaint_id', 'N/A')],
+                ["Date Filed:", getattr(complaint_data, 'created_at', 'N/A')],
                 ["Status:", complaint_data.status.value if complaint_data.status else "N/A"],
                 ["Priority:", complaint_data.priority.value if complaint_data.priority else "N/A"]
             ]
@@ -315,15 +316,15 @@ class PDFService:
             story.append(Spacer(1, 20))
             
             # Child Information
-            if complaint_data.child_information:
+            if hasattr(complaint_data, 'child_name') and complaint_data.child_name:
                 story.append(Paragraph("Child Information", styles['Heading2']))
                 story.append(Spacer(1, 12))
                 
                 child_info = [
-                    ["Name:", complaint_data.child_information.get("name", "N/A")],
-                    ["Age:", str(complaint_data.child_information.get("age", "N/A"))],
-                    ["Gender:", complaint_data.child_information.get("gender", "N/A")],
-                    ["School/Institution:", complaint_data.child_information.get("school", "N/A")]
+                    ["Name:", getattr(complaint_data, 'child_name', 'N/A')],
+                    ["Age:", str(getattr(complaint_data, 'child_age', 'N/A'))],
+                    ["Gender:", getattr(complaint_data, 'child_gender', 'N/A')],
+                    ["School/Institution:", getattr(complaint_data, 'child_school', 'N/A')]
                 ]
                 
                 child_table = Table(child_info, colWidths=[2*inch, 4*inch])
@@ -343,17 +344,17 @@ class PDFService:
             story.append(Paragraph("Incident Details", styles['Heading2']))
             story.append(Spacer(1, 12))
             
-            if complaint_data.incident_details:
-                incident_text = complaint_data.incident_details.get("description", "No description provided")
+            if hasattr(complaint_data, 'incident_description') and complaint_data.incident_description:
+                incident_text = getattr(complaint_data, 'incident_description', 'No description provided')
                 story.append(Paragraph(incident_text, styles['Normal']))
                 story.append(Spacer(1, 12))
                 
                 # Incident metadata
                 incident_meta = [
-                    ["Incident Type:", complaint_data.incident_details.get("type", "N/A")],
-                    ["Date of Incident:", complaint_data.incident_details.get("date", "N/A")],
-                    ["Location:", complaint_data.incident_details.get("location", "N/A")],
-                    ["Witnesses:", complaint_data.incident_details.get("witnesses", "None")]
+                    ["Incident Type:", getattr(complaint_data, 'incident_type', 'N/A')],
+                    ["Date of Incident:", getattr(complaint_data, 'incident_date', 'N/A')],
+                    ["Location:", getattr(complaint_data, 'location', 'N/A')],
+                    ["Witnesses:", getattr(complaint_data, 'witnesses', 'None')]
                 ]
                 
                 incident_table = Table(incident_meta, colWidths=[2*inch, 4*inch])
@@ -370,16 +371,16 @@ class PDFService:
                 story.append(Spacer(1, 20))
             
             # Guardian Information
-            if complaint_data.guardian_information:
+            if hasattr(complaint_data, 'guardian_name') and complaint_data.guardian_name:
                 story.append(Paragraph("Guardian Information", styles['Heading2']))
                 story.append(Spacer(1, 12))
                 
                 guardian_info = [
-                    ["Name:", complaint_data.guardian_information.get("name", "N/A")],
-                    ["Relationship:", complaint_data.guardian_information.get("relationship", "N/A")],
-                    ["Phone:", complaint_data.guardian_information.get("phone", "N/A")],
-                    ["Email:", complaint_data.guardian_information.get("email", "N/A")],
-                    ["Address:", complaint_data.guardian_information.get("address", "N/A")]
+                    ["Name:", getattr(complaint_data, 'guardian_name', 'N/A')],
+                    ["Relationship:", getattr(complaint_data, 'guardian_relationship', 'N/A')],
+                    ["Phone:", getattr(complaint_data, 'guardian_phone', 'N/A')],
+                    ["Email:", getattr(complaint_data, 'guardian_email', 'N/A')],
+                    ["Address:", getattr(complaint_data, 'guardian_address', 'N/A')]
                 ]
                 
                 guardian_table = Table(guardian_info, colWidths=[2*inch, 4*inch])
@@ -396,11 +397,11 @@ class PDFService:
                 story.append(Spacer(1, 20))
             
             # Additional Details
-            if complaint_data.additional_details:
+            if hasattr(complaint_data, 'additional_requests') and complaint_data.additional_requests:
                 story.append(Paragraph("Additional Details", styles['Heading2']))
                 story.append(Spacer(1, 12))
                 
-                additional_text = complaint_data.additional_details.get("notes", "No additional notes")
+                additional_text = getattr(complaint_data, 'additional_requests', 'No additional notes')
                 story.append(Paragraph(additional_text, styles['Normal']))
                 story.append(Spacer(1, 20))
             

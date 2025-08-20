@@ -4,11 +4,14 @@ import json
 from datetime import datetime
 import time
 
+from frontend.utils.api_client import APIClient
+
 class AwarenessStories:
     """Streamlit UI component for child safety awareness content"""
     
     def __init__(self, backend_url="http://localhost:8000"):
         self.backend_url = backend_url
+        self.api_client = APIClient(backend_url)
         self.setup_session_state()
     
     def setup_session_state(self):
@@ -644,35 +647,30 @@ class AwarenessStories:
     
     def load_awareness_content(self, age_group="All Ages", content_type="All Types", difficulty="All Levels", search_query=""):
         """Load awareness content from backend"""
-        try:
-            # Build query parameters
-            params = {}
-            if age_group != "All Ages":
-                params["age_group"] = age_group
-            if content_type != "All Types":
-                params["type"] = content_type
-            if difficulty != "All Levels":
-                params["difficulty"] = difficulty
-            if search_query:
-                params["q"] = search_query
-            
-            response = requests.get(
-                f"{self.backend_url}/api/awareness/content",
-                params=params,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                return response.json()
-            else:
-                st.error(f"Failed to load content: {response.status_code}")
-                return []
-                
-        except requests.exceptions.RequestException as e:
-            st.error(f"Connection error: {str(e)}")
-            return []
-        except Exception as e:
-            st.error(f"Unexpected error: {str(e)}")
+        # Build query parameters
+        filters = {}
+        if age_group != "All Ages":
+            filters["age_group"] = age_group
+        if content_type != "All Types":
+            filters["type"] = content_type
+        if difficulty != "All Levels":
+            filters["difficulty"] = difficulty
+        if search_query:
+            filters["q"] = search_query
+        
+        result = self.api_client.get_awareness_content(filters)
+        
+        if result["success"]:
+            data = result["data"]
+            # Combine stories and quizzes into a single list
+            content = []
+            if "stories" in data:
+                content.extend(data["stories"])
+            if "quizzes" in data:
+                content.extend(data["quizzes"])
+            return content
+        else:
+            st.error(f"Failed to load content: {result['error']}")
             return []
     
     def estimate_reading_time(self, content):
@@ -687,11 +685,7 @@ class AwarenessStories:
     
     def check_backend_status(self):
         """Check if backend is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
 
 def main():
     """Main function to run the awareness stories UI"""

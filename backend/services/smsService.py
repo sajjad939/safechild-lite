@@ -9,14 +9,14 @@ import json
 try:
     from twilio.rest import Client
     from twilio.base.exceptions import TwilioException
-    from twilio.http.http_client import TwilioHttpClient
     TWILIO_AVAILABLE = True
 except ImportError:
+    logger = logging.getLogger(__name__)
     TWILIO_AVAILABLE = False
     logger.warning("Twilio library not available. SMS service will be disabled.")
 
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 logger = logging.getLogger(__name__)
 

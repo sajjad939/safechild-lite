@@ -4,28 +4,26 @@ from datetime import datetime
 import time
 
 # Import components
-from components.ChatbotUI import ChatbotUI
-from components.ComplaintForm import ComplaintForm
-from components.EmergencyButton import EmergencyButton
-from components.AwarenessStories import AwarenessStories
-from components.AudioPlayer import AudioPlayer
+from frontend.components.ChatbotUI import ChatbotUI
+from frontend.components.ComplaintForm import ComplaintForm
+from frontend.components.EmergencyButton import EmergencyButton
+from frontend.components.AwarenessStories import AwarenessStories
+from frontend.components.AudioPlayer import AudioPlayer
+from frontend.config import config
+from frontend.utils.api_client import APIClient
 
 class SafeChildApp:
     """Main SafeChild application with navigation and component integration"""
     
     def __init__(self):
-        self.backend_url = st.secrets.get("BACKEND_URL", "http://localhost:8000")
+        self.backend_url = config.backend_url
+        self.api_client = APIClient(self.backend_url)
         self.setup_page_config()
         self.setup_session_state()
     
     def setup_page_config(self):
         """Configure Streamlit page settings"""
-        st.set_page_config(
-            page_title="SafeChild-Lite",
-            page_icon="🛡️",
-            layout="wide",
-            initial_sidebar_state="expanded"
-        )
+        st.set_page_config(**config.get_page_config())
     
     def setup_session_state(self):
         """Initialize session state variables"""
@@ -406,11 +404,7 @@ class SafeChildApp:
     
     def check_backend_status(self):
         """Check if backend service is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
     
     def get_session_duration(self):
         """Get current session duration"""

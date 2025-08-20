@@ -4,11 +4,14 @@ import json
 from datetime import datetime
 import time
 
+from frontend.utils.api_client import APIClient
+
 class ChatbotUI:
     """Streamlit UI component for the SafeChild chatbot"""
     
     def __init__(self, backend_url="http://localhost:8000"):
         self.backend_url = backend_url
+        self.api_client = APIClient(backend_url)
         self.setup_session_state()
     
     def setup_session_state(self):
@@ -76,31 +79,12 @@ class ChatbotUI:
     
     def get_chatbot_response(self, message):
         """Get response from chatbot backend"""
-        try:
-            payload = {
-                "message": message,
-                "session_id": st.session_state.chat_session_id,
-                "user_id": "anonymous"  # In a real app, this would be the logged-in user
-            }
-            
-            response = requests.post(
-                f"{self.backend_url}/api/chatbot",
-                json=payload,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("response", "I'm sorry, I didn't understand that.")
-            else:
-                st.error(f"Backend error: {response.status_code}")
-                return None
-                
-        except requests.exceptions.RequestException as e:
-            st.error(f"Connection error: {str(e)}")
-            return None
-        except Exception as e:
-            st.error(f"Unexpected error: {str(e)}")
+        result = self.api_client.chat_with_bot(message, st.session_state.chat_session_id)
+        
+        if result["success"]:
+            return result["data"].get("response", "I'm sorry, I didn't understand that.")
+        else:
+            st.error(f"Chat error: {result['error']}")
             return None
     
     def render_sidebar_controls(self):
@@ -166,11 +150,7 @@ class ChatbotUI:
     
     def check_backend_status(self):
         """Check if backend is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
 
 def main():
     """Main function to run the chatbot UI"""

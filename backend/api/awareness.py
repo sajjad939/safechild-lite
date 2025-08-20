@@ -8,8 +8,8 @@ from datetime import datetime
 import uuid
 
 # Import services
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

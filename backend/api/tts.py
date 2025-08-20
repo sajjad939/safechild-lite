@@ -5,8 +5,8 @@ from typing import Optional, Dict, Any
 import base64
 import logging
 
-from ..services.ttsService import TTSService
-from ..utils.timeUtils import TimeUtils
+from backend.services.ttsService import TTSService
+from utils.timeUtils import TimeUtils
 
 logger = logging.getLogger(__name__)
 

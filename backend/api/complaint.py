@@ -10,11 +10,11 @@ import os
 import io
 
 # Import services
-from ..services.gptService import GPTService
-from ..services.pdfService import PDFService
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
-from ..models.complaintModel import ComplaintData, PriorityLevel, IncidentType
+from backend.services.gptService import GPTService
+from backend.services.pdfService import PDFService
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
+from backend.models.complaintModel import ComplaintData, PriorityLevel, IncidentType
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -359,6 +359,26 @@ class ComplaintAPI:
         if not result.get("success"):
             raise HTTPException(status_code=500, detail=result.get("error", "Document generation failed"))
         return result.get("document_data", b"")
+
+    def get_complaint(self, complaint_id: str) -> Dict[str, Any]:
+        """Get complaint by ID"""
+        if complaint_id not in self.complaints:
+            raise HTTPException(status_code=404, detail="Complaint not found")
+        return self.complaints[complaint_id]
+    
+    def get_all_complaints(self) -> List[Dict[str, Any]]:
+        """Get all complaints"""
+        return list(self.complaints.values())
+    
+    def update_complaint_status(self, complaint_id: str, status: str) -> Dict[str, Any]:
+        """Update complaint status"""
+        if complaint_id not in self.complaints:
+            raise HTTPException(status_code=404, detail="Complaint not found")
+        
+        self.complaints[complaint_id]["status"] = status
+        self.complaints[complaint_id]["updated_at"] = self.time_utils.get_current_timestamp()
+        
+        return self.complaints[complaint_id]
 
 # Initialize API
 complaint_api = ComplaintAPI()

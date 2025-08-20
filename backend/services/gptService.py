@@ -8,10 +8,10 @@ from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
-from ..models.complaintModel import ComplaintData
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
-from .ai.ai_manager import AIManager
+from backend.models.complaintModel import ComplaintData
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
+from backend.services.ai.ai_manager import AIManager
 
 logger = logging.getLogger(__name__)
 

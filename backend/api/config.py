@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 
-from ..services.ai.ai_manager import AIManager
+from backend.services.ai.ai_manager import AIManager
 
 
 router = APIRouter(prefix="/api/config", tags=["config"])

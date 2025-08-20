@@ -6,9 +6,9 @@ import logging
 import json
 from datetime import datetime
 
-from ..services.gptService import GPTService
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from backend.services.gptService import GPTService
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 logger = logging.getLogger(__name__)
 
@@ -369,6 +369,6 @@ def _generate_message_id() -> str:
 
 def _extract_user_id(request: Request) -> Optional[str]:
     """Extract user ID from request (implement based on your authentication system)"""
-    # This is a placeholder - implement based on your auth system
-    # For example, extract from JWT token, session cookie, etc.
-    return None
+    # Extract from headers or return anonymous user
+    user_id = request.headers.get("X-User-ID")
+    return user_id or "anonymous"

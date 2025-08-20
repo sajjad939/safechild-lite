@@ -9,8 +9,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 logger = logging.getLogger(__name__)
 
@@ -382,7 +382,8 @@ class TTSService:
     def _is_cache_expired(self, cache_file: Path) -> bool:
         """Check if cache file is expired"""
         try:
-            file_age = self.time_utils.get_current_timestamp() - cache_file.stat().st_mtime
+            current_time = datetime.now().timestamp()
+            file_age = current_time - cache_file.stat().st_mtime
             return file_age > (self.cache_ttl_hours * 3600)  # Convert hours to seconds
         except Exception:
             return True  # Consider expired if we can't check

@@ -8,18 +8,23 @@ import logging
 import os
 import time
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import API routers
-from backend.api.chatbot import router as chatbot_router
-from backend.api.complaint import router as complaint_router
-from backend.api.emergency import router as emergency_router
-from backend.api.awareness import router as awareness_router
-from backend.api.tts import router as tts_router
-from backend.api.config import router as config_router
+from .api.chatbot import router as chatbot_router
+from .api.complaint import router as complaint_router
+from .api.emergency import router as emergency_router
+from .api.awareness import router as awareness_router
+from .api.tts import router as tts_router
+from .api.config import router as config_router
+from .config import settings
 
 # Import utilities
-from utils.timeUtils import TimeUtils
-from utils.textCleaner import TextCleaner
+from ..utils.timeUtils import TimeUtils
+from ..utils.textCleaner import TextCleaner
 
 # Configure logging
 logging.basicConfig(
@@ -91,26 +96,10 @@ app = FastAPI(
 # Add middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8501",  # Streamlit default
-        "http://localhost:3000",  # React default
-        "https://safechild-lite.vercel.app",  # Vercel frontend
-        "https://safechild-lite-frontend.vercel.app",  # Alternative Vercel URL
-    ],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=[
-        "localhost",
-        "127.0.0.1",
-        "*.vercel.app",
-        "*.railway.app",
-        "*.herokuapp.com"
-    ]
 )
 
 # Request logging middleware
@@ -398,18 +387,13 @@ async def catch_all(full_path: str):
 if __name__ == "__main__":
     import uvicorn
     
-    # Get configuration from environment
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", "8000"))
-    reload = os.getenv("RELOAD", "false").lower() == "true"
-    
-    logger.info(f"Starting SafeChild-Lite Backend on {host}:{port}")
+    logger.info(f"Starting SafeChild-Lite Backend on {settings.host}:{settings.port}")
     
     # Run the application
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
-        reload=reload,
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
         log_level="info"
     )

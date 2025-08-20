@@ -4,11 +4,14 @@ import json
 from datetime import datetime, date
 import time
 
+from frontend.utils.api_client import APIClient
+
 class ComplaintForm:
     """Streamlit UI component for incident complaint reporting"""
     
     def __init__(self, backend_url="http://localhost:8000"):
         self.backend_url = backend_url
+        self.api_client = APIClient(backend_url)
         self.setup_session_state()
     
     def setup_session_state(self):
@@ -160,41 +163,29 @@ class ComplaintForm:
         
         # Prepare complaint data
         complaint_data = {
-            "child_information": {
-                "name": child_name,
-                "age": child_age,
-                "gender": child_gender if child_gender else None,
-                "school": child_school if child_school else None,
-                "grade": child_grade if child_grade else None,
-                "contact": child_contact if child_contact else None
-            },
-            "incident_details": {
-                "type": incident_type,
-                "date": incident_date.strftime("%Y-%m-%d"),
-                "time": incident_time.strftime("%H:%M"),
-                "location": location,
-                "description": incident_description,
-                "priority": priority
-            },
-            "guardian_information": {
-                "name": guardian_name,
-                "phone": guardian_phone,
-                "email": guardian_email if guardian_email else None,
-                "address": guardian_address if guardian_address else None,
-                "relationship": guardian_relationship if guardian_relationship else None
-            },
-            "additional_details": {
-                "witnesses": witnesses if witnesses else None,
-                "evidence": evidence if evidence else None,
-                "previous_incidents": previous_incidents if previous_incidents else None
-            },
-            "legal_preferences": {
-                "wants_legal_action": wants_legal_action,
-                "wants_mediation": wants_mediation,
-                "wants_restraining_order": wants_restraining_order,
-                "wants_compensation": wants_compensation,
-                "additional_requests": additional_requests if additional_requests else None
-            }
+            "child_name": child_name,
+            "child_age": child_age,
+            "child_gender": child_gender if child_gender else None,
+            "child_school": child_school if child_school else None,
+            "child_grade": child_grade if child_grade else None,
+            "child_contact": child_contact if child_contact else None,
+            "incident_date": incident_date.strftime("%Y-%m-%d"),
+            "incident_time": incident_time.strftime("%H:%M"),
+            "incident_type": incident_type.lower().replace(" ", "_"),
+            "location": location,
+            "incident_description": incident_description,
+            "guardian_name": guardian_name,
+            "guardian_phone": guardian_phone,
+            "guardian_email": guardian_email if guardian_email else None,
+            "guardian_address": guardian_address if guardian_address else None,
+            "witnesses": witnesses if witnesses else None,
+            "evidence": evidence if evidence else None,
+            "previous_incidents": previous_incidents if previous_incidents else None,
+            "wants_legal_action": wants_legal_action,
+            "wants_mediation": wants_mediation,
+            "wants_restraining_order": wants_restraining_order,
+            "wants_compensation": wants_compensation,
+            "additional_requests": additional_requests if additional_requests else None
         }
         
         # Store in session state
@@ -214,27 +205,15 @@ class ComplaintForm:
     
     def generate_complaint_draft(self, complaint_data):
         """Send complaint data to backend for draft generation"""
-        try:
-            response = requests.post(
-                f"{self.backend_url}/api/complaint",
-                json=complaint_data,
-                timeout=60
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                st.session_state.generated_complaint = data.get("complaint_text")
-                st.session_state.complaint_id = data.get("complaint_id")
-                return True
-            else:
-                st.error(f"Backend error: {response.status_code}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            st.error(f"Connection error: {str(e)}")
-            return False
-        except Exception as e:
-            st.error(f"Unexpected error: {str(e)}")
+        result = self.api_client.submit_complaint(complaint_data)
+        
+        if result["success"]:
+            data = result["data"]
+            st.session_state.generated_complaint = data.get("complaint_text")
+            st.session_state.complaint_id = data.get("complaint_id")
+            return True
+        else:
+            st.error(f"Complaint generation failed: {result['error']}")
             return False
     
     def render_generated_draft(self):
@@ -375,11 +354,7 @@ class ComplaintForm:
     
     def check_backend_status(self):
         """Check if backend is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
 
 def main():
     """Main function to run the complaint form UI"""

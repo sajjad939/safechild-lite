@@ -4,11 +4,14 @@ import json
 from datetime import datetime
 import time
 
+from frontend.utils.api_client import APIClient
+
 class EmergencyButton:
     """Streamlit UI component for emergency SOS alerts"""
     
     def __init__(self, backend_url="http://localhost:8000"):
         self.backend_url = backend_url
+        self.api_client = APIClient(backend_url)
         self.setup_session_state()
     
     def setup_session_state(self):
@@ -126,57 +129,46 @@ class EmergencyButton:
     
     def send_emergency_alert(self):
         """Send emergency alert to backend"""
-        try:
-            # Prepare emergency data
-            emergency_data = {
-                "urgency_level": "critical",
-                "location": "Unknown",  # Could be enhanced with GPS
-                "description": "SOS Emergency Alert triggered by user",
-                "contacts": st.session_state.emergency_contacts,
-                "timestamp": datetime.now().isoformat(),
-                "user_id": "anonymous"  # In real app, this would be logged-in user
-            }
+        # Prepare emergency data
+        emergency_data = {
+            "location": "Unknown",  # Could be enhanced with GPS
+            "description": "SOS Emergency Alert triggered by user",
+            "contacts": st.session_state.emergency_contacts,
+            "timestamp": datetime.now().isoformat(),
+            "user_id": "anonymous"
+        }
+        
+        with st.spinner("🚨 Sending emergency alert..."):
+            result = self.api_client.trigger_emergency(emergency_data)
             
-            with st.spinner("🚨 Sending emergency alert..."):
-                response = requests.post(
-                    f"{self.backend_url}/api/emergency",
-                    json=emergency_data,
-                    timeout=30
-                )
+            if result["success"]:
+                data = result["data"]
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Update session state
-                    st.session_state.last_alert_time = datetime.now()
-                    st.session_state.emergency_alerts.append({
-                        "timestamp": datetime.now().isoformat(),
-                        "status": "sent",
-                        "message": "Emergency alert sent successfully",
-                        "alert_id": data.get("alert_id", "unknown")
-                    })
-                    
-                    st.success("✅ Emergency alert sent successfully!")
-                    st.balloons()
-                    
-                    # Show next steps
-                    st.info("""
-                    **Emergency Alert Sent Successfully!**
-                    
-                    **Next Steps:**
-                    1. **Stay calm** and assess the situation
-                    2. **Call 911** if immediate danger exists
-                    3. **Follow emergency services instructions**
-                    4. **Your emergency contacts have been notified**
-                    """)
-                    
-                else:
-                    st.error(f"❌ Failed to send emergency alert: {response.status_code}")
-                    
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Connection error: {str(e)}")
-        except Exception as e:
-            st.error(f"❌ Unexpected error: {str(e)}")
+                # Update session state
+                st.session_state.last_alert_time = datetime.now()
+                st.session_state.emergency_alerts.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "sent",
+                    "message": "Emergency alert sent successfully",
+                    "alert_id": data.get("alert_id", "unknown")
+                })
+                
+                st.success("✅ Emergency alert sent successfully!")
+                st.balloons()
+                
+                # Show next steps
+                st.info("""
+                **Emergency Alert Sent Successfully!**
+                
+                **Next Steps:**
+                1. **Stay calm** and assess the situation
+                2. **Call 911** if immediate danger exists
+                3. **Follow emergency services instructions**
+                4. **Your emergency contacts have been notified**
+                """)
+                
+            else:
+                st.error(f"❌ Failed to send emergency alert: {result['error']}")
     
     def render_emergency_contacts(self):
         """Render emergency contacts management"""
@@ -419,11 +411,7 @@ class EmergencyButton:
     
     def check_backend_status(self):
         """Check if backend is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
 
 def main():
     """Main function to run the emergency button UI"""

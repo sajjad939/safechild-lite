@@ -8,9 +8,9 @@ from datetime import datetime
 import uuid
 
 # Import services
-from ..services.smsService import SMSService
-from ..utils.textCleaner import TextCleaner
-from ..utils.timeUtils import TimeUtils
+from backend.services.smsService import SMSService
+from utils.textCleaner import TextCleaner
+from utils.timeUtils import TimeUtils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

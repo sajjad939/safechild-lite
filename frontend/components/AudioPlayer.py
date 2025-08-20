@@ -5,11 +5,14 @@ from datetime import datetime
 import time
 import base64
 
+from frontend.utils.api_client import APIClient
+
 class AudioPlayer:
     """Streamlit UI component for text-to-speech and audio playback"""
     
     def __init__(self, backend_url="http://localhost:8000"):
         self.backend_url = backend_url
+        self.api_client = APIClient(backend_url)
         self.setup_session_state()
     
     def setup_session_state(self):
@@ -111,54 +114,34 @@ class AudioPlayer:
     
     def generate_audio(self, text, language, speed, voice):
         """Generate audio from text using backend TTS service"""
-        try:
-            with st.spinner("🎵 Generating audio..."):
-                payload = {
+        with st.spinner("🎵 Generating audio..."):
+            result = self.api_client.convert_text_to_speech(text, language, speed)
+            
+            if result["success"]:
+                data = result["data"]
+                
+                # Store in audio history
+                audio_item = {
+                    "id": data.get("audio_id", f"audio_{int(time.time())}"),
                     "text": text,
                     "language": language,
                     "speed": speed,
-                    "voice": voice
+                    "voice": voice,
+                    "audio_data": data.get("audio_data"),
+                    "duration": data.get("duration", 0),
+                    "created_at": datetime.now().isoformat(),
+                    "file_size": data.get("file_size", 0)
                 }
                 
-                response = requests.post(
-                    f"{self.backend_url}/api/tts",
-                    json=payload,
-                    timeout=60
-                )
+                st.session_state.audio_history.append(audio_item)
+                st.session_state.current_audio = audio_item
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Store in audio history
-                    audio_item = {
-                        "id": data.get("audio_id", f"audio_{int(time.time())}"),
-                        "text": text,
-                        "language": language,
-                        "speed": speed,
-                        "voice": voice,
-                        "audio_url": data.get("audio_url"),
-                        "audio_data": data.get("audio_data"),
-                        "duration": data.get("duration", 0),
-                        "created_at": datetime.now().isoformat(),
-                        "file_size": data.get("file_size", 0)
-                    }
-                    
-                    st.session_state.audio_history.append(audio_item)
-                    st.session_state.current_audio = audio_item
-                    
-                    st.success("✅ Audio generated successfully!")
-                    st.balloons()
-                    
-                    # Auto-play the generated audio
-                    st.rerun()
-                    
-                else:
-                    st.error(f"❌ Failed to generate audio: {response.status_code}")
-                    
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Connection error: {str(e)}")
-        except Exception as e:
-            st.error(f"❌ Unexpected error: {str(e)}")
+                st.success("✅ Audio generated successfully!")
+                st.balloons()
+                st.rerun()
+                
+            else:
+                st.error(f"❌ Failed to generate audio: {result['error']}")
     
     def render_audio_player(self):
         """Render the audio player interface"""
@@ -544,11 +527,7 @@ class AudioPlayer:
     
     def check_backend_status(self):
         """Check if backend is accessible"""
-        try:
-            response = requests.get(f"{self.backend_url}/health", timeout=5)
-            return response.status_code == 200
-        except:
-            return False
+        return self.api_client.health_check()
 
 def main():
     """Main function to run the audio player UI"""

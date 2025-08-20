@@ -1,0 +1,204 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI Service
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: safechild-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - LOG_LEVEL=INFO
+    env_file:
+      - .env
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - safechild-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Streamlit Service
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: safechild-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - safechild-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Service (Optional - for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: safechild-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - safechild-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database (Optional - for future use)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: safechild-postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_DB=safechild_db
+  #     - POSTGRES_USER=safechild_user
+  #     - POSTGRES_PASSWORD=safechild_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - safechild-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U safechild_user -d safechild_db"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: safechild-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - safechild-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Monitoring and Logging (Optional)
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: safechild-prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #   networks:
+  #     - safechild-network
+  #   restart: unless-stopped
+  #   profiles:
+  #     - monitoring
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: safechild-grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   networks:
+  #     - safechild-network
+  #   restart: unless-stopped
+  #   profiles:
+  #     - monitoring
+
+volumes:
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  safechild-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Development overrides
+x-development: &development
+  environment:
+    - APP_ENV=development
+    - DEBUG=true
+    - LOG_LEVEL=DEBUG
+
+# Production overrides
+x-production: &production
+  environment:
+    - APP_ENV=production
+    - DEBUG=false
+    - LOG_LEVEL=WARNING
+  deploy:
+    replicas: 2
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 1G
+      reservations:
+        cpus: '0.5'
+        memory: 512M
+
+# Profiles for different deployment scenarios
+profiles:
+  development:
+    - backend
+    - frontend
+    - redis
+  
+  production:
+    - backend
+    - frontend
+    - redis
+    - nginx
+  
+  monitoring:
+    - prometheus
+    - grafana
+  
+  full:
+    - backend
+    - frontend
+    - redis
+    - nginx
+    - prometheus
+    - grafana
